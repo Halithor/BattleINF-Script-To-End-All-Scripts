@@ -44,14 +44,13 @@ var settings = {
 var _rarities = ["None", "Gray", "Green", "Blue", "Red", "Orange", "Purple", "Teal"];
 var _ages = ["Worn" , "Fine", "Refined", "Aged", "Exotic", "Famous", "Master", "Heroic", "Ancient", "Fabled", "Ascended", "Legendary", "Eternal"];
 
-
 function postMessage(text) {
     console.log(text);
     API.notifications.create("SteaS: " + text, 10);
 }
 
 function getItemString(item) {
-    return _rarities[item.rarity] + " " + _ages[item.ageLevel] + " " + item.name  + " +" + item.plus;
+    return '<i class="fa fa-star"></i>' + item.rarity + " " + _ages[item.ageLevel] + " " + item.name  + " +" + item.plus;
 }
 
 function isItemAtMaxPlus(item) {
@@ -130,17 +129,21 @@ function sellIfMax(item) {
 }
 
 // Tries to equip the item if better. Returns the unequiped item if it works, false otherwise.
-function equipIfBetter(item) {
+function equipIfBetter(item, callback) {
     var equipment = ScriptAPI.$user.character.equipment;
     var equip = findEquipped(equipment, item);
 
     if (equip && (isItemBetter(item, equip) || (settings.forceEquipHighestRarity && isItemRarer(item, equip)) ) ) {
         postMessage("Changed equipped " + equip.type + ":" + equip.subType);
-        API.inventory.unequip(equip);
-        API.inventory.equip(item);
-        return equip;
+        API.inventory.unequip(equip, function() {
+            API.inventory.equip(item, function() {
+                callback(equip);
+            });
+        });
     }
-    return false;
+    if (callback) {
+        callback(false);
+    }
 }
 
 // Get a sorted list of the inventory items.
@@ -186,22 +189,26 @@ items.forEach(function (item) {
     }
 
     if (primary) {
-        postMessage("Crafting " + getItemString(primary) + " with " + getItemString(item) + (isEquipped ? " [equipped]" : " [inventory]"));
+        postMessage("Crafting " + getItemString(primary) + (isEquipped ? " [equipped]" : " [inventory]") + " with " + getItemString(item));
         API.inventory.craft(primary, item);
 
         // Primary has now been upgraded. Compare it to the currently equipped piece of equipment, and if it wins, equip it.
         if (!isEquipped) {
-            var equip = equipIfBetter(primary);
-
-            // If we changed equipment, try to sell the un-equipped item.
-            if (equip) {
-                sellIfMax(equip);
-            } else {
-                sellIfMax(primary);
-            }
+            equipIfBetter(primary, function(unequippedItem) {
+                // If we changed equipment, try to sell the un-equipped item.
+                if (unequippedItem) {
+                    sellIfMax(unequippedItem);
+                } else {
+                    sellIfMax(primary);
+                }
+            });
         }
     } else {
-        equipIfBetter(item);
+        equipIfBetter(item, function (unequippedItem) {
+            if (unequippedItem) {
+                sellIfMax(unequippedItem);
+            }
+        });
     }
 });
 
