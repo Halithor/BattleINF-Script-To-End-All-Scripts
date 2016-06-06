@@ -235,15 +235,15 @@
         }
         return false;
     }
+    // Get a sorted list of the inventory items.
+    var inventory = getSortedInventory();
 
+    // Get the equipment
+    var equipment = ScriptAPI.$user.character.equipment;
 
     var itemsLeft = items.length;
     items.forEach(function (item) {
-        // Get a sorted list of the inventory items.
-        var inventory = getSortedInventory();
 
-        // Get the equipment
-        var equipment = ScriptAPI.$user.character.equipment;
         if (item.rarity < settings.sellBelow && !(item.rarity > settings.keepAbove)) {
             itemsLeft--;
             sellItem(item);
