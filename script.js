@@ -28,10 +28,11 @@
  *
  * Features:
  * - Sells items below a threshold.
- * - Crafts new items into equipped items and optionally, inventory items.
- *      + Inventory items is useful for getting higher rarity gear to be more powerful than current gear :)
+ * - Crafts new items into equipped items and, optionally, inventory items.
+ *      + Inventory items is useful for getting higher rarity gear to be more powerful than current gear
  * - Equips items that are better than currently equipped items.
- *
+ * - Sells items that have reached maximum Plus, and aren't better than the currently equipped item of that type.
+ * - Dips all of your items into the fountain, automagically, to increase the age modifiers.
  */
 
 // Settings for the game. Edit these to fit your character better.
