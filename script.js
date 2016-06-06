@@ -312,7 +312,7 @@
                 if (duplicates) {
                     for (var i = 0; i < duplicates.length; i++) {
                         var dup = duplicates[i];
-                        if (isItemBetter(item, dup)) {
+                        if (isItemStronger(item, dup)) {
                             sellItem(dup);
                         } else {
                             sellItem(tempItem);
