@@ -75,8 +75,8 @@ function isSameItemType(first, second) {
 // Returns if two items are compatible for crafting.
 function canCraftItems(first, second) {
     return isSameItemType(first, second)
-        && candidate.rarity == secondary.rarity
-        && candidate.mod == secondary.mod;
+        && first.rarity == second.rarity
+        && first.mod == second.mod;
 }
 
 // Tries to find a good item from items for secondary to combined into. Picks the first one found.
