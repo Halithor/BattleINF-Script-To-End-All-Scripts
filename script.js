@@ -321,8 +321,6 @@
                         itemsLeft--;
                     }
                 }
-
-                return;
             }
 
         }
