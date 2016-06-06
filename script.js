@@ -41,13 +41,17 @@ var settings = {
     forceEquipHighestRarity: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
 };
 
+var _rarities = ["Gray", "Green", "Blue", "Red", "Orange", "Purple", "Teal"];
+var _ages = ["Worn" , "Fine", "Refined", "Aged", "Exotic", "Famous", "Master", "Heroic", "Ancient", "Fabled", "Ascended", "Legendary", "Eternal"];
+
+
 function postMessage(text) {
     console.log(text);
     API.notifications.create("SteaS: " + text);
 }
 
 function getItemString(item) {
-    return item.name + " (" + item.rarity + ") +" + item.plus + " [" + item.ageLevel + "]";
+    return _rarities[item.rarity] + " " + _ages[item.ageLevel] + " " + item.name  + " +" + item.plus;
 }
 
 function isItemAtMaxPlus(item) {
