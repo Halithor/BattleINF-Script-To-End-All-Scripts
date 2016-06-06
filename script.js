@@ -1,36 +1,26 @@
-/**
- * Created by Sam Marquart on 6/5/2016.
- */
-
-
-var items = [{
-    id: "",
-    entityType: "",
-    rarity: 1,
-    type: "",
-    subType: "",
-    ts: 0,
-    plus: 0,
-    ageLevel: 0,
-    handed: 1,
-    stats: {
-        hp: 0,
-        attackMin: 0,
-        attackMax: 0,
-        defense: 0,
-        overkill: 0,
-        heal: 0,
-        hpBonus: 0
-    },
-    name: "", // {Helmet, Armor, Gloves, Leggings, Boots, Sword, 2-handed Sword, Bow, Crossbow, Wand, Staff, Shield}
-
-}];
-
-items.forEach(function(item) {
-    if (item.rarity < 2) {
-        API.inventory.sell(item);
-    }
-});
+// Structure of items.
+//var items = [{
+//    id: "",
+//    entityType: "",
+//    rarity: 1,
+//    type: "",
+//    subType: "",
+//    ts: 0,
+//    plus: 0,
+//    ageLevel: 0,
+//    handed: 1,
+//    stats: {
+//        hp: 0,
+//        attackMin: 0,
+//        attackMax: 0,
+//        defense: 0,
+//        overkill: 0,
+//        heal: 0,
+//        hpBonus: 0
+//    },
+//    name: "", // {Helmet, Armor, Gloves, Leggings, Boots, Sword, 2-handed Sword, Bow, Crossbow, Wand, Staff, Shield}
+//
+//}];
 
 /** ============= Battle INF Script to End All Scripts ==========
  * Authored by Sam 'Halithor' Marquart.
@@ -50,6 +40,11 @@ var settings = {
     craftInventory: true, // Whether or not to craft items in your inventory.
     forceEquipHighestRarity: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
 };
+
+function postMessage(text) {
+    console.log(text);
+    API.notifications.create("SteaS: " + text);
+}
 
 function getItemString(item) {
     return item.name + " (" + item.rarity + ") +" + item.plus + " [" + item.ageLevel + "]";
@@ -125,7 +120,7 @@ function isItemRarer(first, second) {
 // Sells an item if it's at the max level.
 function sellIfMax(item) {
     if (isItemAtMaxPlus(item) && item.rarity <= settings.keepAtMax) {
-        API.notifications.create("SteaS: Selling " + getItemString(item));
+        postMessage("Selling " + getItemString(item));
         API.inventory.sell(item);
     }
 }
@@ -136,7 +131,7 @@ function equipIfBetter(item) {
     var equip = findEquipped(equipment, item);
 
     if (equip && (isItemBetter(item, equip) || (settings.forceEquipHighestRarity && isItemRarer(item, equip)) ) ) {
-        API.notifications.create("SteaS: Changed equipped " + equip.type + ":" + equip.subType);
+        postMessage("Changed equipped " + equip.type + ":" + equip.subType);
         API.inventory.unequip(equip);
         API.inventory.equip(item);
         return equip;
@@ -165,10 +160,9 @@ var inventory = ScriptAPI.$user.inventory.items.sort(function (a, b) {
 var equipment = ScriptAPI.$user.character.equipment;
 
 items.forEach(function (item) {
-    API.notifications.create('SteaS: Processing ' + getItemString(item));
-    console.log('SteaS: Processing ' + getItemString(item));
+
     if (item.rarity < settings.sellBelow) {
-        // Sell the item if it's useless.
+        postMessage('Selling ' + getItemString(item));
         API.inventory.sell(item);
         return;
     }
@@ -188,7 +182,7 @@ items.forEach(function (item) {
     }
 
     if (primary) {
-        API.notifications.create("SteaS: Crafting " + getItemString(primary) + " with " + getItemString(item) + (isEquipped ? " [equipped]" : " [inventory]"));
+        postMessage("Crafting " + getItemString(primary) + " with " + getItemString(item) + (isEquipped ? " [equipped]" : " [inventory]"));
         API.inventory.craft(primary, item);
 
         // Primary has now been upgraded. Compare it to the currently equipped piece of equipment, and if it wins, equip it.
