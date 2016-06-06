@@ -33,6 +33,10 @@
  * - Equips items that are better than currently equipped items.
  * - Sells items that have reached maximum Plus, and aren't better than the currently equipped item of that type.
  * - Dips all of your items into the fountain, automagically, to increase the age modifiers.
+ *
+ * Notes:
+ * - Only works on items you have gained after you include the script. It will not fix your inventory.
+ * -
  */
 
 // Settings for the game. Edit these to fit your character better.
