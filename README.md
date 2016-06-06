@@ -15,3 +15,7 @@ An advanced script which handles item management for the game Battle INF (http:/
 3. Paste the contents of this script into the text box.
 4. Hit save.
 5. Profit! (Note: it will only work on items you gain from this point on).
+
+
+## Features to Add
+- Advanced market selling 
