@@ -49,7 +49,7 @@
         keepAbove: 4, // The rarity above which we DO NOT ever auto sell (exclusive).
         keepAge: 6, // Age level which to NEVER sell above. 6 is two days (Master).
         craftInventory: true, // Whether or not to craft items in your inventory.
-        sellDuplicateInventory: true, // If we should sell any duplicates of a given item type in the inventory, and only keep the strongest item.
+        sellDuplicateInventory: false, // If we should sell any duplicates of a given item type in the inventory, and only keep the strongest item. THIS IS DANGEROUS
         forceEquipHighestStrength: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
     };
 
@@ -241,7 +241,7 @@
         }
 
         if (equipped && (isItemBetter(item, equipped) || (settings.forceEquipHighestStrength && isItemStronger(item, equipped)) )) {
-            postMessage("Changed equipped " + equipped.type + ":" + equipped.subType);
+            postMessage("Changed equipped " + equipped.name + " to " + getItemString(item));
             //API.inventory.unequip(equipped);
             API.inventory.equip(item);
             return equipped;
