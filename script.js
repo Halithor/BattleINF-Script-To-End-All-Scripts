@@ -29,14 +29,16 @@
  * Features:
  * - Sells items below a threshold.
  * - Crafts new items into equipped items and optionally, inventory items.
+ *      + Inventory items is useful for getting higher rarity gear to be more powerful than current gear :)
  * - Equips items that are better than currently equipped items.
+ *
  */
 
 // Settings for the game. Edit these to fit your character better.
 var settings = {
     version: 1.0,
-    sellBelow: 2, //< The threshold below which we automatically sell, without combining. Increase this as you like.
-    keepAtMax: 4, // The rarity that we DO NOT ever auto sell at.
+    sellBelow: 2, // The threshold below which we automatically sell (exclusive), without combining. Increase this as you like.
+    keepAbove: 4, // The rarity above which we DO NOT ever auto sell (exclusive).
     craftInventory: true, // Whether or not to craft items in your inventory.
     forceEquipHighestRarity: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
 };
@@ -122,7 +124,7 @@ function isItemRarer(first, second) {
 
 // Sells an item if it's at the max level.
 function sellIfMax(item) {
-    if (isItemAtMaxPlus(item) && item.rarity <= settings.keepAtMax) {
+    if (isItemAtMaxPlus(item) && item.rarity <= settings.keepAbove) {
         postMessage("Selling " + getItemString(item));
         API.inventory.sell(item);
     }
@@ -168,7 +170,7 @@ var equipment = ScriptAPI.$user.character.equipment;
 
 items.forEach(function (item) {
 
-    if (item.rarity < settings.sellBelow) {
+    if (item.rarity < settings.sellBelow && !(item.rarity > settings.keepAbove)) {
         postMessage('Selling ' + getItemString(item));
         API.inventory.sell(item);
         return;
