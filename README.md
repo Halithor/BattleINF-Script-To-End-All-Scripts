@@ -19,3 +19,4 @@ An advanced script which handles item management for the game Battle INF (http:/
 
 ## Features to Add
 - Advanced market selling 
+- Check ts, not the ageLevel due to market issue.
