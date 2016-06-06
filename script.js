@@ -46,6 +46,7 @@
         openInvSlots: 2, // The number of spots that will ALWAYS be held open in your inventory. I recommend setting this to the drops you get per cycle.
         sellBelow: 2, // The threshold below which we automatically sell (exclusive), without combining. Increase this as you like.
         keepAbove: 4, // The rarity above which we DO NOT ever auto sell (exclusive).
+        keepAge: 6, // Age level which to NEVER sell above. 6 is two days (Master).
         craftInventory: true, // Whether or not to craft items in your inventory.
         sellDuplicateInventory: true, // If we should sell any duplicates of a given item type in the inventory, and only keep the strongest item.
         forceEquipHighestStrength: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
@@ -113,9 +114,12 @@
 
     // Will the additional items push the inventory to full?
     function getInventoryFull(itemsLeft) {
-        if (!itemsLeft)
+        if (!itemsLeft) {
             itemsLeft = settings.openInvSlots;
-        return (ScriptAPI.$user.inventory.items.length + itemsLeft >= ScriptAPI.$user.upgrades.inventoryMax.value);
+        }
+        var val = (ScriptAPI.$user.inventory.items.length + itemsLeft >= ScriptAPI.$user.upgrades.inventoryMax.value);
+        console.log("getInventoryFull: " + val);
+        return val;
     }
 
     function getSortedInventory() {
@@ -181,10 +185,12 @@
         return getItemStrength(first) > getItemStrength(second);
     }
 
-    // Sells an item, without any safety checks.
+    // Sells an item, only checking age.
     function sellItem(item) {
-        postMessage("Selling " + getItemString(item));
-        API.inventory.sell(item);
+        if (item.ageLevel < 6) {
+            postMessage("Selling " + getItemString(item));
+            API.inventory.sell(item);
+        }
     }
 
     // Sells an item if it's at the max level.
@@ -322,7 +328,6 @@
                     }
                 }
             }
-
         }
     });
 
