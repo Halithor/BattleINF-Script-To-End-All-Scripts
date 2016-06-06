@@ -41,19 +41,27 @@ var settings = {
     sellBelow: 2, // The threshold below which we automatically sell (exclusive), without combining. Increase this as you like.
     keepAbove: 4, // The rarity above which we DO NOT ever auto sell (exclusive).
     craftInventory: true, // Whether or not to craft items in your inventory.
-    forceEquipHighestRarity: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
+    sellDuplicateInventory: true, // If we should sell any duplicates of a given item type in the inventory, and only keep the strongest item.
+    forceEquipHighestStrength: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
 };
 
 var _rarities = ["None", "Gray", "Green", "Blue", "Red", "Orange", "Purple", "Teal"];
 var _ages = ["Worn" , "Fine", "Refined", "Aged", "Exotic", "Famous", "Master", "Heroic", "Ancient", "Fabled", "Ascended", "Legendary", "Eternal"];
 
+
 function postMessage(text) {
     console.log(text);
-    API.notifications.create("SteaS: " + text, 10);
+    API.notifications.create("" + text, 10);
 }
 
+// String that displays most info about an item.
 function getItemString(item) {
-    return '<i class="fa fa-star"></i>' + item.rarity + " " + _ages[item.ageLevel] + " " + item.name  + " +" + item.plus;
+    return '<i class="fa fa-star"></i>' + item.rarity + "." + item.mod + " " + _ages[item.ageLevel] + " " + item.name  + " +" + item.plus;
+}
+
+// Calculates the relative starting strength of an item.
+function getItemStrength(item) {
+    return (item.mod * 2) + item.rarity;
 }
 
 function isItemAtMaxPlus(item) {
@@ -64,63 +72,68 @@ function isSameItemType(first, second) {
     return first.type == second.type && first.subType == second.subType
 }
 
+// Returns if two items are compatible for crafting.
+function canCraftItems(first, second) {
+    return isSameItemType(first, second)
+        && candidate.rarity == secondary.rarity
+        && candidate.mod == secondary.mod;
+}
+
 // Tries to find a good item from items for secondary to combined into. Picks the first one found.
 function findPrimaryCraft(items, secondary) {
     for (var j = 0; j < items.length; j++) {
         var candidate = items[j];
-        if (candidate.name == secondary.name
-            && candidate.rarity == secondary.rarity
-            && !isItemAtMaxPlus(candidate)) {
+        if (canCraftItems(candidate, secondary) && !isItemAtMaxPlus(candidate)) {
             return candidate;
         }
     }
+    return undefined;
 }
 
 
 
-// Find the item equipped of a given type.
-function findEquipped(equipment, primary) {
+// Find the item equipped matching the given item.
+function findEquipped(primary) {
+    var equipment = ScriptAPI.$user.character.equipment;
     for (var i in equipment) {
         var candidate = equipment[i];
         if (isSameItemType(primary, candidate)) {
             return candidate;
         }
     }
+    return undefined;
 }
 
 // Returns true if first is better than second. False otherwise.
 // Does not care about rarity, age, etc. Purely based on stats.
+// This is one of the things you can change to value items differently!
 function isItemBetter(first, second) {
     if (!isSameItemType(first, second)) {
         return false; // Don't even compare if not the same.
     }
 
-    switch (first.subType) {
-        case 'SHIELD':
-        case 'ARMOR':
-            var armorRatio = first.stats.defense / second.stats.defense;
-            var hpBonusDiff = (first.hpBonus - second.hpBonus);
-            return armorRatio + (hpBonusDiff/50) > 1.0;
-        case 'SWORD':
-        case 'TWO_HANDED_SWORD':
-        case 'BOW':
-        case 'CROSSBOW':
-            var damageFirst = (first.stats.attackMax + first.stats.attackMin) / 2;
-            var damageSecond = (second.stats.attackMax + second.stats.attackMin) / 2;
-            var damageRatio = damageFirst / damageSecond;
-            var overkillDiff = first.stats.overkill - second.stats.overkill;
-            return damageRatio + (overkillDiff / 20) > 1.0;
-        case "STAFF":
-        case "WAND":
-            var healRatio = (first.stats.heal / second.stats.heal);
-            return healRatio > 1.0;
-        default: // Uncomparable, make no assumptions.
-            return false;
+    if (first.type == "weapon") {
+        // Damage consideration
+        var damageFirst = (first.stats.attackMax + first.stats.attackMin) / 2;
+        var damageSecond = (second.stats.attackMax + second.stats.attackMin) / 2;
+        var damageRatio = damageSecond > 0 ? damageFirst / damageSecond : 1.0;
+        // Overkill consideration
+        var overkillDiff = first.stats.overkill - second.stats.overkill;
+        // Healing ratio.
+        var healRatio =  second.stats.heal > 0 ? (first.stats.heal / second.stats.heal) : 1.0;
+        var armorRatio = second.stats.defense > 0 ? first.stats.defense / second.stats.defense : 1.0;
+        var hpBonusDiff = (first.hpBonus - second.hpBonus);
+        return damageRatio + healRatio + armorRatio + (overkillDiff/15) + (hpBonusDiff/50) > 3.0;
+    } else {
+        // Everything that's not a weapon is armor.
+        var armorRatio = first.stats.defense / second.stats.defense;
+        var hpBonusDiff = (first.hpBonus - second.hpBonus);
+        return armorRatio + (hpBonusDiff/50) > 1.0;
     }
 }
 
-function isItemRarer(first, second) {
-    return first.rarity > second.rarity;
+function isItemStronger(first, second) {
+    return getItemStrength(first) > getItemStrength(second);
 }
 
 // Sells an item if it's at the max level.
@@ -133,10 +146,9 @@ function sellIfMax(item) {
 
 // Tries to equip the item if better. Returns the unequiped item if it works, false otherwise.
 function equipIfBetter(item, callback) {
-    var equipment = ScriptAPI.$user.character.equipment;
-    var equip = findEquipped(equipment, item);
+    var equip = findEquipped(item);
 
-    if (equip && (isItemBetter(item, equip) || (settings.forceEquipHighestRarity && isItemRarer(item, equip)) ) ) {
+    if (equip && (isItemBetter(item, equip) || (settings.forceEquipHighestStrength && isItemStronger(item, equip)) ) ) {
         postMessage("Changed equipped " + equip.type + ":" + equip.subType);
         API.inventory.unequip(equip, function() {
             API.inventory.equip(item, function() {
@@ -151,7 +163,7 @@ function equipIfBetter(item, callback) {
 
 // Get a sorted list of the inventory items.
 var inventory = ScriptAPI.$user.inventory.items.sort(function (a, b) {
-    if (a.rarity == b.rarity) {
+    if (getItemStrength(a) == getItemStrength(b)) {
         if (a.plus == b.plus) {
             if (a.ageLevel == b.ageLevel) {
                 return 0;
@@ -162,7 +174,7 @@ var inventory = ScriptAPI.$user.inventory.items.sort(function (a, b) {
             return a.plus > b.plus ? -1 : 1;
         }
     } else {
-        return a.rarity > b.rarity ? -1 : 1;
+        return getItemStrength(a) > getItemStrength(b) ? -1 : 1;
     }
 });
 
@@ -212,6 +224,15 @@ items.forEach(function (item) {
                 sellIfMax(unequippedItem);
             }
         });
+
+        // If we're not crafting the inventory,
+        if (!settings.craftInventory && settings.sellDuplicateInventory) {
+            var better = findPrimaryCraft(inventory, item);
+            if (isItemBetter(better)) {
+                postMessage('Selling ' + getItemString(item) + " as a duplicate.");
+                API.inventory.sell(item);
+            }
+        }
     }
 });
 
