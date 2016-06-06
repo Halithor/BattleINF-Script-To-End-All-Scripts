@@ -40,6 +40,7 @@
  * -
  */
 (function () {
+    items = items || [];
     // Settings for the game. Edit these to fit your character better.
     var settings = {
         version: 1.0,
@@ -57,7 +58,7 @@
 
 
     function postMessage(text) {
-        console.log(text);
+        //console.log(text);
         API.notifications.create("" + text, 10);
     }
 
@@ -118,7 +119,6 @@
             itemsLeft = settings.openInvSlots;
         }
         var val = (ScriptAPI.$user.inventory.items.length + itemsLeft >= ScriptAPI.$user.upgrades.inventoryMax.value);
-        console.log("getInventoryFull: " + val);
         return val;
     }
 
@@ -170,14 +170,22 @@
             var overkillDiff = first.stats.overkill - second.stats.overkill;
             // Healing ratio.
             var healRatio = second.stats.heal > 0 ? (first.stats.heal / second.stats.heal) : 1.0;
+            healRatio = healRatio == 0 ? 1.0 : healRatio;
+
             var armorRatio = second.stats.defense > 0 ? first.stats.defense / second.stats.defense : 1.0;
-            var hpBonusDiff = (first.hpBonus - second.hpBonus);
-            return damageRatio + healRatio + armorRatio + (overkillDiff / 15) + (hpBonusDiff / 50) > 3.0;
+            var hpBonusDiff = (first.stats.hpBonus - second.stats.hpBonus);
+
+            var weaponValue = damageRatio + healRatio + armorRatio + (overkillDiff / 15) + (hpBonusDiff / 50);
+            console.log("isItemBetter: weapon " + weaponValue + "|" + damageRatio + ":" + healRatio + ":" + armorRatio);
+            return  weaponValue > 3.0;
         } else {
             // Everything that's not a weapon is armor.
             var armorRatio = first.stats.defense / second.stats.defense;
-            var hpBonusDiff = (first.hpBonus - second.hpBonus);
-            return armorRatio + (hpBonusDiff / 50) > 1.0;
+            var hpBonusDiff = (first.stats.hpBonus - second.stats.hpBonus);
+
+            var armorValue = armorRatio + (hpBonusDiff / 50);
+            console.log("isItemBetter: armor " + armorValue + "|" + armorRatio);
+            return armorValue > 1.0;
         }
     }
 
@@ -187,8 +195,8 @@
 
     // Sells an item, only checking age.
     function sellItem(item) {
-        if (item.ageLevel < 6) {
-            postMessage("Selling " + getItemString(item));
+        if (item.ageLevel < settings.keepAge && !item.lock) {
+            //postMessage("Selling " + getItemString(item));
             API.inventory.sell(item);
         }
     }
@@ -223,24 +231,27 @@
 
     // Tries to equip the item if better. Returns the unequiped item if it works, false otherwise.
     function equipIfBetter(item, callback) {
-        var equip = findEquipped(item);
+        var equipped = findEquipped(item);
 
-        if (equip && (isItemBetter(item, equip) || (settings.forceEquipHighestStrength && isItemStronger(item, equip)) )) {
-            postMessage("Changed equipped " + equip.type + ":" + equip.subType);
-            API.inventory.unequip(equip, function () {
-                API.inventory.equip(item, function () {
-                    if (callback) {
-                        callback(equip);
-                    }
-                });
-            });
-            return equip;
+        if (equipped) {
+            console.log("EquipIfBetter (equipped above new)");
+            console.log(equipped);
+            console.log(item);
+            console.log(isItemBetter(item, equipped));
+        }
+
+        if (equipped && (isItemBetter(item, equipped) || (settings.forceEquipHighestStrength && isItemStronger(item, equipped)) )) {
+            postMessage("Changed equipped " + equipped.type + ":" + equipped.subType);
+            //API.inventory.unequip(equipped);
+            API.inventory.equip(item);
+            return equipped;
         }
         if (callback) {
             callback(false);
         }
         return false;
     }
+
     // Get a sorted list of the inventory items.
     var inventory = getSortedInventory();
 
