@@ -75,9 +75,22 @@
         return false;
     }
 
-    // Checks if the first item is stronger than the second, based on getItemStrength()
+    // Checks if the first item is stronger than the second, based on getItemStrength(), then a bunch of other stuff.
     function isItemStronger(first, second) {
-        return getItemStrength(first) > getItemStrength(second);
+        if (getItemStrength(first) == getItemStrength(second)) {
+            if (first.plus == first.plus) {
+                if (first.ageLevel == second.ageLevel) {
+                    // At this point they're pretty much the same damn item. Compare them based on actual stats. Will return false if different types.
+                    return isItemBetter(first, second);
+                } else {
+                    return first.ageLevel > second.ageLevel;
+                }
+            } else {
+                return first.plus > second.plus;
+            }
+        } else {
+            return getItemStrength(first) > getItemStrength(second);
+        }
     }
 
     // Returns if two items are compatible for crafting.
@@ -335,10 +348,7 @@
             // First try to equip it.
             var unequippedItem = equipIfBetter(item);
             if (unequippedItem) {
-                if (sellIfMax(unequippedItem)) {
-                    itemsLeft--;
-                    return;
-                }
+                sellIfMax(unequippedItem);
             }
             // Now look at the inventory and remove any duplicates.
             if (settings.sellDuplicateInventory) {
@@ -346,7 +356,7 @@
                 if (unequippedItem) {
                     item = unequippedItem;
                 }
-                // Remove all duplicates in the inventory.
+                // Remove all duplicates in the inventory, keeping only the strongest.
                 var duplicates = findDuplicateTypes(inventory, item);
                 var tempItem = item;
                 if (duplicates) {
@@ -358,7 +368,6 @@
                             sellItem(tempItem);
                             tempItem = dup;
                         }
-                        itemsLeft--;
                     }
                 }
             }
