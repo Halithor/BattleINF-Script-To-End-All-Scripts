@@ -1,6 +1,7 @@
 /** ============= Battle INF Script to End All Scripts ==========
  * Authored by Sam 'Halithor' Marquart.
  * Version 1.2.
+ * https://github.com/Halithor/BattleINF-Script-To-End-All-Scripts
  * Licenced under MIT (https://opensource.org/licenses/MIT).
  *
  * Features:
