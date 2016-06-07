@@ -1,29 +1,7 @@
-// Structure of items.
-//var items = [{
-//    id: "",
-//    entityType: "",
-//    rarity: 1,
-//    type: "",
-//    subType: "",
-//    ts: 0,
-//    plus: 0,
-//    ageLevel: 0,
-//    handed: 1,
-//    stats: {
-//        hp: 0,
-//        attackMin: 0,
-//        attackMax: 0,
-//        defense: 0,
-//        overkill: 0,
-//        heal: 0,
-//        hpBonus: 0
-//    },
-//    name: "", // {Helmet, Armor, Gloves, Leggings, Boots, Sword, 2-handed Sword, Bow, Crossbow, Wand, Staff, Shield}
-//
-//}];
 
 /** ============= Battle INF Script to End All Scripts ==========
  * Authored by Sam 'Halithor' Marquart.
+ * Version 1.2.
  * Licenced under MIT (https://opensource.org/licenses/MIT).
  *
  * Features:
@@ -32,8 +10,9 @@
  *      + Inventory items is useful for getting higher rarity gear to be more powerful than current gear
  * - Equips items that are better than currently equipped items.
  * - Sells items that have reached maximum Plus, and aren't better than the currently equipped item of that type.
+ *      + Sends items to the market if they're above the threshold.
  * - Dips all of your items into the fountain, automagically, to increase the age modifiers.
- * - Removes duplicate items of a given type, leaving only the strongest.
+ * - Removes duplicate items of a given type, leaving only the strongest in your inventory.
  *
  * Notes:
  * - Only works on items you have gained after you include the script. It will not fix your inventory.
@@ -43,10 +22,10 @@
     items = items || [];
     // Settings for the game. Edit these to fit your character better.
     var settings = {
-        version: 1.0,
-        openInvSlots: 2, // The number of spots that will ALWAYS be held open in your inventory. I recommend setting this to the drops you get per cycle.
         sellBelow: 2, // The threshold below which we automatically sell (exclusive), without combining. Increase this as you like.
         keepAbove: 4, // The rarity above which we DO NOT ever auto sell (exclusive).
+        sendToMarketAbove: 4, // The rarity above which instead of selling at max, we send the item to the market. OVERRIDES keepAbove
+        openInvSlots: 2, // The number of spots that will ALWAYS be held open in your inventory. I recommend setting this to the drops you get per cycle.
         keepAge: 6, // Age level which to NEVER sell above. 6 is two days (Master).
         craftInventory: true, // Whether or not to craft items in your inventory.
         sellDuplicateInventory: false, // If we should sell any duplicates of a given item type in the inventory, and only keep the strongest item. THIS IS DANGEROUS
@@ -55,6 +34,7 @@
 
     var _rarities = ["None", "Gray", "Green", "Blue", "Red", "Orange", "Purple", "Teal"];
     var _ages = ["Worn", "Fine", "Refined", "Aged", "Exotic", "Famous", "Master", "Heroic", "Ancient", "Fabled", "Ascended", "Legendary", "Eternal"];
+    var _ageThresholds = [0, 900, 1800, 3600, 7200, 86400, 172800, 345600, 691200, 1382400, 2764800, 5529600, 11059200];
 
 
     function postMessage(text) {
@@ -85,6 +65,20 @@
         return isSameItemType(first, second)
             && first.rarity == second.rarity
             && first.mod == second.mod;
+    }
+
+    function sendItemToMarket(item) {
+        API.market.addToMarket(item);
+    }
+
+    function getItemAgeLevel(item) {
+        var now = Math.round(new Date().getTime()/1000);
+        var diff = now - item.ts;
+        var i = 0;
+        while (diff > _ageThresholds[i] && i < _ageThresholds.length) {
+            i++;
+        }
+        return i - 1; // Off by one based on the iteration.
     }
 
     // Tries to find a good item from items for secondary to combined into. Picks the first one found.
@@ -195,7 +189,7 @@
 
     // Sells an item, only checking age.
     function sellItem(item) {
-        if (item.ageLevel < settings.keepAge && !item.lock) {
+        if (getItemAgeLevel(item) < settings.keepAge && !item.lock) {
             //postMessage("Selling " + getItemString(item));
             API.inventory.sell(item);
         }
@@ -203,8 +197,12 @@
 
     // Sells an item if it's at the max level.
     function sellIfMax(item) {
-        if (isItemAtMaxPlus(item) && item.rarity <= settings.keepAbove) {
-            sellItem(item);
+        if (isItemAtMaxPlus(item)) {
+            if (item.rarity > settings.sendToMarketAbove) {
+                sendItemToMarket(item);
+            } else if (item.rarity <= settings.keepAbove) {
+                sellItem(item);
+            }
             return true;
         }
         return false;
@@ -285,22 +283,22 @@
             // We can craft this into something.
             itemsLeft--;
             postMessage("Crafting " + getItemString(primary) + (isEquipped ? " [equipped]" : " [inventory]") + " with " + getItemString(item));
-            API.inventory.craft(primary, item); // TODO bind this callback
+            API.inventory.craft(primary, item, function (data) {
+                if (!data.success) {
+                    return;
+                }
+                var newItem = data.newItem;
 
-            // Primary has now been upgraded. Compare it to the currently equipped piece of equipment, and if it wins, equip it.
-            if (!isEquipped) {
-                var unequippedItem = equipIfBetter(primary);
-                // If we changed equipment, try to sell the un-equipped item.
-                if (unequippedItem) {
-                    if (sellIfMax(unequippedItem)) {
-                        itemsLeft--;
-                    }
-                } else {
-                    if (sellIfMax(primary)) {
-                        itemsLeft--;
+                if (!isEquipped) {
+                    var unequippedItem = equipIfBetter(newItem);
+                    // If we changed equipment, try to sell the un-equipped item.
+                    if (unequippedItem) {
+                        sellIfMax(unequippedItem);
+                    } else {
+                        sellIfMax(newItem);
                     }
                 }
-            }
+            });
         } else {
             // Deal with the new item.
 
@@ -347,8 +345,16 @@
         openLastInventorySpots();
     }
 
+    var now = Math.floor(new Date().getTime() / 1000);
+
+    function checkAgeAndAgeUp(item) {
+        if (now > item.ts + _ageThresholds[item.ageLevel + 1]){
+            ScriptAPI.$craftingService.ageUpItem(item);
+        }
+    }
+
     // Age up everything that we own, if possible.
-    inventory.forEach(ScriptAPI.$craftingService.ageUpItem);
-    equipment.forEach(ScriptAPI.$craftingService.ageUpItem);
+    inventory.forEach(checkAgeAndAgeUp);
+    equipment.forEach(checkAgeAndAgeUp);
 
 }());
