@@ -13,9 +13,7 @@
  * - Dips all of your items into the fountain, automagically, to increase the age modifiers.
  * - Removes duplicate items of a given type, leaving only the strongest in your inventory.
  *
- * Notes:
- * - Only works on items you have gained after you include the script. It will not fix your inventory.
- * -
+
  */
 (function () {
     items = items || [];
@@ -27,15 +25,20 @@
         openInvSlots: 2, // The number of spots that will ALWAYS be held open in your inventory. I recommend setting this to the drops you get per cycle.
         keepAge: 6, // Age level which to NEVER sell above. 6 is two days (Master).
         craftInventory: true, // Whether or not to craft items in your inventory.
-        sellDuplicateInventory: false, // If we should sell any duplicates of a given item type in the inventory, and only keep the strongest item. THIS IS DANGEROUS
+        sellDuplicateInventory: false, // If we should sell any duplicates of a given item type in the inventory, and only keep the strongest item. **THIS IS DANGEROUS**.
         forceEquipHighestStrength: false // If you always want to equip the highest rarity, no matter the stats. I recommend this to be true if you don't craft the inventory.
     };
 
+    // A list of the  words describing rarities, corresponding to the integer value.
     var _rarities = ["None", "Gray", "Green", "Blue", "Red", "Orange", "Purple", "Teal"];
+    // Same as above, but instead provides color codes.
     var _rarityColor = ["white", "#666", "#4CAF50", "#2196F3", "#F44336", "#FF9800", "#9C27B0", "#E91E63"];
+    // The words used to describe the different age levels in the game, corresponding by index.
     var _ages = ["Worn", "Fine", "Refined", "Aged", "Exotic", "Famous", "Master", "Heroic", "Ancient", "Fabled", "Ascended", "Legendary", "Eternal"];
+    // Time thresholds (in milliseconds) for the different age levels. Again by index.
     var _ageThresholds = [0, 900000, 1800000, 3600000, 7200000, 86400000, 172800000, 345600000, 691200000, 1382400000, 2764800000, 5529600000, 11059200000];
 
+    // Posts a message to the user via notifications.
     function postMessage(text) {
         //console.log(text);
         API.notifications.create("" + text, 10);
@@ -51,14 +54,17 @@
         return (item.mod * 2) + item.rarity;
     }
 
+    // Checks if an item is at the maximum plus value it can reach.
     function isItemAtMaxPlus(item) {
         return item.plus >= (5 + item.rarity * 5);
     }
 
+    // Checks to see if two items share the same type and subType.
     function isSameItemType(first, second) {
         return first.type == second.type && first.subType == second.subType
     }
 
+    // Checks to see if an item is equipped.
     function isItemEquipped(item) {
         var equipment = ScriptAPI.$user.character.equipment;
         for (var i in equipment) {
@@ -69,6 +75,11 @@
         return false;
     }
 
+    // Checks if the first item is stronger than the second, based on getItemStrength()
+    function isItemStronger(first, second) {
+        return getItemStrength(first) > getItemStrength(second);
+    }
+
     // Returns if two items are compatible for crafting.
     function canCraftItems(first, second) {
         return isSameItemType(first, second)
@@ -76,10 +87,12 @@
             && first.mod == second.mod;
     }
 
+    // Sends an item to the market screen.
     function sendItemToMarket(item) {
         API.market.addToMarket(item);
     }
 
+    // Calculate the item age level. Used to make sure selling is safe, even if you haven't dipped everything.
     function getItemAgeLevel(item) {
         var now = Math.round(new Date().getTime());
         var diff = now - item.ts;
@@ -102,6 +115,9 @@
         return candidates;
     }
 
+    // Given a candidate list, craft the candidates. Attempts to craft each option on the list, until it finds one
+    // that's successful, or runs out of candidates. Designed to still craft when there's items stuck below max plus
+    // value (due to Impurity).
     function craftCandidates(candidates, item) {
         var canIndex = 0;
 
@@ -147,7 +163,7 @@
         return undefined;
     }
 
-    // Will the additional items push the inventory to full?
+    // Will the additional items push the inventory to full? Defaults to the setting if not provided a number.
     function getInventoryFull(itemsLeft) {
         if (!itemsLeft) {
             itemsLeft = settings.openInvSlots;
@@ -156,6 +172,7 @@
         return val;
     }
 
+    // Gets the user's inventory, sorted by strength, plus, then age level.
     function getSortedInventory() {
         return ScriptAPI.$user.inventory.items.sort(function (a, b) {
             if (getItemStrength(a) == getItemStrength(b)) {
@@ -225,11 +242,8 @@
         }
     }
 
-    function isItemStronger(first, second) {
-        return getItemStrength(first) > getItemStrength(second);
-    }
 
-    // Sells an item, only checking age.
+    // Sells an item, only checking age and lock status.
     function sellItem(item) {
         if (getItemAgeLevel(item) < settings.keepAge && !item.lock) {
             //postMessage("Selling " + getItemString(item));
@@ -237,7 +251,7 @@
         }
     }
 
-    // Sells an item if it's at the max level.
+    // Sells or Markets an item, only if it's at max level.
     function sellIfMax(item) {
         if (isItemAtMaxPlus(item)) {
             if (item.rarity > settings.sendToMarketAbove) {
@@ -289,15 +303,12 @@
 
     // Get a sorted list of the inventory items.
     var inventory = getSortedInventory();
-
     // Get the equipment
     var equipment = ScriptAPI.$user.character.equipment;
-
-    var itemsLeft = items.length;
+    // Iterate through each new item, trying to craft it, or handling it otherwise.
     items.forEach(function (item) {
 
         if (item.rarity < settings.sellBelow && !(item.rarity > settings.keepAbove)) {
-            itemsLeft--;
             sellItem(item);
             return;
         }
@@ -361,6 +372,7 @@
 
     var now = Math.floor(new Date().getTime());
 
+    // Used to reduce the number of AgeUp calls made to the server.
     function checkAgeAndAgeUp(item) {
         console.log("AGE: " + (now - item.ts) + " : " + _ageThresholds[item.ageLevel + 1]);
         console.log(item);
@@ -369,7 +381,7 @@
         }
     }
 
-    // Age up everything that we own, if possible.
+    // Age up everything that we own, if it's ready..
     inventory.forEach(checkAgeAndAgeUp);
     equipment.forEach(checkAgeAndAgeUp);
 
