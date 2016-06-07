@@ -305,8 +305,10 @@
 
         if (equipped && (isItemBetter(item, equipped) || (settings.forceEquipHighestStrength && isItemStronger(item, equipped)) )) {
             postMessage("<b>Equip:</b> " + equipped.name + " to " + getItemString(item));
-            //API.inventory.unequip(equipped);
-            API.inventory.equip(item);
+            API.inventory.unequip(equipped, function() {
+                API.inventory.equip(item);
+            });
+
             return equipped;
         }
         if (callback) {
