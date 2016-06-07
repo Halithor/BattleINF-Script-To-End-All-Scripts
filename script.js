@@ -167,10 +167,13 @@
             healRatio = healRatio == 0 ? 1.0 : healRatio;
 
             var armorRatio = second.stats.defense > 0 ? first.stats.defense / second.stats.defense : 1.0;
+            if (first.stats.defense == 0 || second.stats.defense == 0) {
+                armorRatio = 1.0; // Don't compare on something one item doesn't have.
+            }
+
             var hpBonusDiff = (first.stats.hpBonus - second.stats.hpBonus);
 
             var weaponValue = damageRatio + healRatio + armorRatio + (overkillDiff / 15) + (hpBonusDiff / 50);
-            console.log("isItemBetter: weapon " + weaponValue + "|" + damageRatio + ":" + healRatio + ":" + armorRatio);
             return  weaponValue > 3.0;
         } else {
             // Everything that's not a weapon is armor.
@@ -178,7 +181,6 @@
             var hpBonusDiff = (first.stats.hpBonus - second.stats.hpBonus);
 
             var armorValue = armorRatio + (hpBonusDiff / 50);
-            console.log("isItemBetter: armor " + armorValue + "|" + armorRatio);
             return armorValue > 1.0;
         }
     }
@@ -199,8 +201,10 @@
     function sellIfMax(item) {
         if (isItemAtMaxPlus(item)) {
             if (item.rarity > settings.sendToMarketAbove) {
+                postMessage("Market Max: " + getItemString(item));
                 sendItemToMarket(item);
             } else if (item.rarity <= settings.keepAbove) {
+                postMessage("Selling Max: " + getItemString(item));
                 sellItem(item);
             }
             return true;
@@ -230,13 +234,6 @@
     // Tries to equip the item if better. Returns the unequiped item if it works, false otherwise.
     function equipIfBetter(item, callback) {
         var equipped = findEquipped(item);
-
-        if (equipped) {
-            console.log("EquipIfBetter (equipped above new)");
-            console.log(equipped);
-            console.log(item);
-            console.log(isItemBetter(item, equipped));
-        }
 
         if (equipped && (isItemBetter(item, equipped) || (settings.forceEquipHighestStrength && isItemStronger(item, equipped)) )) {
             postMessage("Changed equipped " + equipped.name + " to " + getItemString(item));
