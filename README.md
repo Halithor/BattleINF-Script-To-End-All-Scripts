@@ -1,5 +1,5 @@
 # Halithor's Script to End All Scripts
-An advanced script which handles item management for the game Battle INF (http://battleinf.com). Free for anyone to use or modfiy. 
+An advanced script which handles item management for the game Battle INF (http://battleinf.com). Free for anyone to use or modfiy. Contains a lot of utility functions which are useful for anyone trying to write their own script.
 
 ## Features:
 - Sells items below a threshold.
