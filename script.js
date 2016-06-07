@@ -1,4 +1,3 @@
-
 /** ============= Battle INF Script to End All Scripts ==========
  * Authored by Sam 'Halithor' Marquart.
  * Version 1.2.
@@ -33,6 +32,7 @@
     };
 
     var _rarities = ["None", "Gray", "Green", "Blue", "Red", "Orange", "Purple", "Teal"];
+    var _rarityColor = ["white", "#666", "#4CAF50", "#2196F3", "#F44336", "#FF9800", "#9C27B0", "#E91E63"];
     var _ages = ["Worn", "Fine", "Refined", "Aged", "Exotic", "Famous", "Master", "Heroic", "Ancient", "Fabled", "Ascended", "Legendary", "Eternal"];
     var _ageThresholds = [0, 900000, 1800000, 3600000, 7200000, 86400000, 172800000, 345600000, 691200000, 1382400000, 2764800000, 5529600000, 11059200000];
 
@@ -43,7 +43,7 @@
 
     // String that displays most info about an item.
     function getItemString(item) {
-        return '<i class="fa fa-star"></i>' + item.rarity + "." + item.mod + " " + _ages[item.ageLevel] + " " + item.name + " +" + item.plus;
+        return '<span style="color: ' + _rarityColor[item.rarity] + ';"><i class="fa fa-star"></i>' + item.rarity + "." + item.mod + " " + _ages[item.ageLevel] + " " + item.name + " +" + item.plus + "</span>";
     }
 
     // Calculates the relative starting strength of an item.
@@ -57,6 +57,16 @@
 
     function isSameItemType(first, second) {
         return first.type == second.type && first.subType == second.subType
+    }
+
+    function isItemEquipped(item) {
+        var equipment = ScriptAPI.$user.character.equipment;
+        for (var i in equipment) {
+            if (equipment[i].id == item.id) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Returns if two items are compatible for crafting.
@@ -80,15 +90,46 @@
         return i - 1; // Off by one based on the iteration.
     }
 
-    // Tries to find a good item from items for secondary to combined into. Picks the first one found.
-    function findPrimaryCraft(items, secondary) {
+    // Find all options for crafting.
+    function findCraftingCandidates(items, secondary) {
+        var candidates = [];
         for (var j = 0; j < items.length; j++) {
             var candidate = items[j];
             if (canCraftItems(candidate, secondary) && !isItemAtMaxPlus(candidate)) {
-                return candidate;
+                candidates.push(candidate);
             }
         }
-        return undefined;
+        return candidates;
+    }
+
+    function craftCandidates(candidates, item) {
+        var canIndex = 0;
+
+        function callback(data) {
+            if (!data.success) {
+                canIndex++;
+                if (canIndex < candidates.length) {
+                    API.inventory.craft(candidates[canIndex], item, callback);
+                }
+                return;
+            }
+
+            var newItem = data.newItem;
+
+            postMessage("<b>Crafting:</b> " + getItemString(newItem));
+
+            if (!isItemEquipped(newItem)) {
+                var unequippedItem = equipIfBetter(newItem);
+                // If we changed equipment, try to sell the un-equipped item.
+                if (unequippedItem) {
+                    sellIfMax(unequippedItem);
+                } else {
+                    sellIfMax(newItem);
+                }
+            }
+        }
+
+        API.inventory.craft(candidates[canIndex], item, callback);
     }
 
     // Less picky than find primary craft. Used for inventory duplicates.
@@ -173,7 +214,7 @@
             var hpBonusDiff = (first.stats.hpBonus - second.stats.hpBonus);
 
             var weaponValue = damageRatio + healRatio + armorRatio + (overkillDiff / 15) + (hpBonusDiff / 50);
-            return  weaponValue > 3.0;
+            return weaponValue > 3.0;
         } else {
             // Everything that's not a weapon is armor.
             var armorRatio = first.stats.defense / second.stats.defense;
@@ -268,33 +309,15 @@
 
         // Find a good candidate to craft this item into.
         var isEquipped = false;
-        var primary = findPrimaryCraft(equipment, item);
-        if (primary) isEquipped = true;
+        var candidates = findCraftingCandidates(equipment, item);
 
-        if (!primary && settings.craftInventory) {
-            primary = findPrimaryCraft(inventory, item);
+        if (settings.craftInventory) {
+            candidates = candidates.concat(findCraftingCandidates(inventory, item));
         }
 
-        if (primary) {
+        if (candidates.length > 0) {
             // We can craft this into something.
-            itemsLeft--;
-            postMessage("<b>Crafting</b> " + getItemString(primary) + (isEquipped ? " [equipped]" : " [inventory]"));
-            API.inventory.craft(primary, item, function (data) {
-                if (!data.success) {
-                    return;
-                }
-                var newItem = data.newItem;
-
-                if (!isEquipped) {
-                    var unequippedItem = equipIfBetter(newItem);
-                    // If we changed equipment, try to sell the un-equipped item.
-                    if (unequippedItem) {
-                        sellIfMax(unequippedItem);
-                    } else {
-                        sellIfMax(newItem);
-                    }
-                }
-            });
+            craftCandidates(candidates, item);
         } else {
             // Deal with the new item.
 
@@ -304,11 +327,6 @@
                 if (sellIfMax(unequippedItem)) {
                     itemsLeft--;
                     return;
-                } else {
-                    if (getInventoryFull(itemsLeft)) {
-                        sellLastInventoryItem();
-                        itemsLeft--;
-                    }
                 }
             }
             // Now look at the inventory and remove any duplicates.
@@ -346,7 +364,7 @@
     function checkAgeAndAgeUp(item) {
         console.log("AGE: " + (now - item.ts) + " : " + _ageThresholds[item.ageLevel + 1]);
         console.log(item);
-        if ((now - item.ts)  > _ageThresholds[item.ageLevel + 1]){
+        if ((now - item.ts) > _ageThresholds[item.ageLevel + 1]) {
             ScriptAPI.$craftingService.ageUpItem(item);
         }
     }

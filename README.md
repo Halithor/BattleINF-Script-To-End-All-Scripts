@@ -3,18 +3,21 @@ An advanced script which handles item management for the game Battle INF (http:/
 
 ## Features:
 - Sells items below a threshold.
-- Crafts new items into equipped items and, optionally, inventory items.
-    + Inventory items is useful for getting higher rarity gear to be more powerful than current gear
-- Equips items that are better than currently equipped items.
-- Sells items that have reached maximum Plus, and aren't better than the currently equipped item of that type.
+- Crafts acquired items into items in your possession, prioritizing equipped items, then inventory items.
+- Equips items that are upgraded to be better than currently equipped items.
+- Sells items that have reached maximum plus level. Can either send them to the market, or just plain sell them.
 - Dips all of your items into the fountain, automagically, to increase the age modifiers.
+- Can help manage inventory by removing duplicates from it.
+- Can be used to keep a number of inventory slots open.
+
+Note: the second number, after the item rarity, is the item modifier. This is based on the location you found this item. An items overall strength is based on `rarity + ( 2 * mod )`. This strength is used to prioritize items to keep and upgrade.
 
 ## How to use
 1. Log into your account on Battle Inf.
 2. Click the "Scripts" tab on the top menu.
 3. Paste the contents of this script into the text box.
 4. Hit save.
-5. Profit! (Note: it will only work on items you gain from this point on).
+5. Profit!
 
 ## Settings
 Here's a quick rundown of the settings and what they do.
