@@ -20,7 +20,7 @@ Note: the second number, after the item rarity, is the item modifier. This is ba
 5. Profit!
 
 ## Settings
-Here's a quick rundown of the settings and what they do.
+Here's a quick rundown of the settings and what they do. The default stats are designed to be pretty safe. Edit these to tune to your current game progress.
 
 | Setting                   | Type | Description |
 | ------------------------- | ---- | ----------- |
@@ -31,5 +31,3 @@ Here's a quick rundown of the settings and what they do.
 | keepAge                   | int  | This is a safety setting. The script will never sell any items above this age. Note it is in ageLevel (dips in the well), so 6 is two days (Master). |
 | craftInventory            | bool | Whether or not to upgrade items in your inventory. The script will always try to upgrade equipped items first, then try items in your inventory. |
 | sellDuplicateInventory    | bool | Whether or not to sell duplicate items. **WARNING** will sell a lot of items in your inventory. This makes sure that you only have a single item of type in your inventory (Sword, Bow, Helmet, etc), and sells every other item. It will sell the *lowest strength* item in your inventory, which is based on zone and rarity. Useful if you have a very low number of inventory spots. |
-
-## Features to Add
