@@ -386,8 +386,6 @@
 
     // Used to reduce the number of AgeUp calls made to the server.
     function checkAgeAndAgeUp(item) {
-        console.log("AGE: " + (now - item.ts) + " : " + _ageThresholds[item.ageLevel + 1]);
-        console.log(item);
         if ((now - item.ts) > _ageThresholds[item.ageLevel + 1]) {
             ScriptAPI.$craftingService.ageUpItem(item);
         }
