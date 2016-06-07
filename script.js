@@ -34,8 +34,7 @@
 
     var _rarities = ["None", "Gray", "Green", "Blue", "Red", "Orange", "Purple", "Teal"];
     var _ages = ["Worn", "Fine", "Refined", "Aged", "Exotic", "Famous", "Master", "Heroic", "Ancient", "Fabled", "Ascended", "Legendary", "Eternal"];
-    var _ageThresholds = [0, 900, 1800, 3600, 7200, 86400, 172800, 345600, 691200, 1382400, 2764800, 5529600, 11059200];
-
+    var _ageThresholds = [0, 900000, 1800000, 3600000, 7200000, 86400000, 172800000, 345600000, 691200000, 1382400000, 2764800000, 5529600000, 11059200000];
 
     function postMessage(text) {
         //console.log(text);
@@ -72,7 +71,7 @@
     }
 
     function getItemAgeLevel(item) {
-        var now = Math.round(new Date().getTime()/1000);
+        var now = Math.round(new Date().getTime());
         var diff = now - item.ts;
         var i = 0;
         while (diff > _ageThresholds[i] && i < _ageThresholds.length) {
@@ -201,10 +200,10 @@
     function sellIfMax(item) {
         if (isItemAtMaxPlus(item)) {
             if (item.rarity > settings.sendToMarketAbove) {
-                postMessage("Market Max: " + getItemString(item));
+                postMessage("<b>Market Max:</b> " + getItemString(item));
                 sendItemToMarket(item);
             } else if (item.rarity <= settings.keepAbove) {
-                postMessage("Selling Max: " + getItemString(item));
+                postMessage("<b>Selling Max:</b> " + getItemString(item));
                 sellItem(item);
             }
             return true;
@@ -236,7 +235,7 @@
         var equipped = findEquipped(item);
 
         if (equipped && (isItemBetter(item, equipped) || (settings.forceEquipHighestStrength && isItemStronger(item, equipped)) )) {
-            postMessage("Changed equipped " + equipped.name + " to " + getItemString(item));
+            postMessage("<b>Equip:</b> " + equipped.name + " to " + getItemString(item));
             //API.inventory.unequip(equipped);
             API.inventory.equip(item);
             return equipped;
@@ -279,7 +278,7 @@
         if (primary) {
             // We can craft this into something.
             itemsLeft--;
-            postMessage("Crafting " + getItemString(primary) + (isEquipped ? " [equipped]" : " [inventory]") + " with " + getItemString(item));
+            postMessage("<b>Crafting</b> " + getItemString(primary) + (isEquipped ? " [equipped]" : " [inventory]"));
             API.inventory.craft(primary, item, function (data) {
                 if (!data.success) {
                     return;
@@ -342,10 +341,12 @@
         openLastInventorySpots();
     }
 
-    var now = Math.floor(new Date().getTime() / 1000);
+    var now = Math.floor(new Date().getTime());
 
     function checkAgeAndAgeUp(item) {
-        if (now > item.ts + _ageThresholds[item.ageLevel + 1]){
+        console.log("AGE: " + (now - item.ts) + " : " + _ageThresholds[item.ageLevel + 1]);
+        console.log(item);
+        if ((now - item.ts)  > _ageThresholds[item.ageLevel + 1]){
             ScriptAPI.$craftingService.ageUpItem(item);
         }
     }
